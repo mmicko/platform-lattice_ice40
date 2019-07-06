@@ -51,12 +51,14 @@ IVL_PATH = join(
     pioPlatform.get_package_dir('toolchain-iverilog'), 'lib', 'ivl')
 VLIB_PATH = join(
     pioPlatform.get_package_dir('toolchain-iverilog'), 'vlib')
+YOSYS_PATH = join(
+    pioPlatform.get_package_dir('toolchain-yosys'), 'share', 'yosys')
 VLIB_FILES = ' '.join([
     '"{}"'.format(f) for f in Glob(join(VLIB_PATH, '*.v'))
     ]) if VLIB_PATH else ''
 
 CHIPDB_PATH = join(
-    pioPlatform.get_package_dir('toolchain-icestorm'), 'share', 'icebox',
+    pioPlatform.get_package_dir('toolchain-ice40'), 'share', 'icebox',
     'chipdb-{0}.txt'.format(env.BoardConfig().get('build.size', '1k')))
 
 isWindows = 'Windows' == system()
@@ -122,24 +124,25 @@ except IndexError:
     print('---> WARNING: no .pcf file found')
 
 #
-# Builder: Yosys (.v --> .blif)
+# Builder: Yosys (.v --> .json)
 #
 synth = Builder(
-    action='yosys -p \"synth_ice40 -blif $TARGET\" -q $SOURCES',
-    suffix='.blif',
+    action='yosys -p \"synth_ice40 -json $TARGET\" -q $SOURCES',
+    suffix='.json',
     src_suffix='.v')
 
 #
-# Builder: Arachne-pnr (.blif --> .asc)
+# Builder: Arachne-pnr (.json --> .asc)
 #
 pnr = Builder(
-    action='arachne-pnr -d {0} -P {1} -p "{2}" -o $TARGET $SOURCE'.format(
+    action='nextpnr-ice40 --{0}{1} --package {2} --json $SOURCE --pcf {3} --asc $TARGET --quiet'.format(
+        env.BoardConfig().get('build.type', 'hx'),
         env.BoardConfig().get('build.size', '1k'),
         env.BoardConfig().get('build.pack', 'tq144'),
         PCF
     ),
     suffix='.asc',
-    src_suffix='.blif')
+    src_suffix='.json')
 
 #
 # Builder: Icepack (.asc --> .bin)
@@ -218,6 +221,24 @@ vcd_file = env.VCD(sout)
 target_sim = env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
     vcd_file[0], join(env['PROJECTSRC_DIR'], SIMULNAME)))
 AlwaysBuild(target_sim)
+
+# -- Verilator builder
+verilator = Builder(
+    action='verilator --lint-only -v {0}/ice40/cells_sim.v {1} {2} {3} {4} $SOURCES'.format(
+        YOSYS_PATH,
+        '-Wall',
+        '-Wno-style',
+        '',
+        ''),
+    src_suffix='.v')
+
+env.Append(BUILDERS={'Verilator': verilator})
+
+# --- Lint
+lout = env.Verilator(TARGET, src_synth)
+
+lint = env.Alias('lint', lout)
+AlwaysBuild(lint)
 
 #
 # Setup default targets
