@@ -38,12 +38,6 @@ env.Replace(
     UPLOADBINCMD='$UPLOADER $UPLOADERFLAGS $SOURCES')
 env.Append(SIMULNAME='simulation')
 
-if "Darwin" == system():
-    env.PrependENVPath(
-        "DYLD_LIBRARY_PATH",
-        join(pioPlatform.get_package_dir('toolchain-icestorm'), "lib")
-    )
-
 # -- Target name for synthesis
 TARGET = join(env['BUILD_DIR'], env['PROGNAME'])
 
