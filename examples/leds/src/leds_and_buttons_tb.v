@@ -10,7 +10,7 @@ module leds_and_buttons_tb();
   always #1 clk = ~clk;
 
   reg  [2:0] btn = 0;
-  wire [5:0] led;
+  wire [4:0] led;
 
   leds_and_buttons UUT (.btn(btn), .led(led));
 

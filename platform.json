@@ -35,16 +35,6 @@
           ]
         }
       ],
-      "toolchain-ecp5": [
-        {
-          "url": "https://github.com/mmicko/platform-lattice_ice40/releases/download/test/toolchain-ecp5-linux_x86_64-2019.10.1.tar.gz",
-          "sha1": "18b71e8886515214d3f61c4df027a7f1b91d58ef",
-          "version": "2019.10.1",
-          "system": [
-              "linux_x86_64"
-          ]
-        }
-      ],
       "toolchain-iverilog": [
         {
           "url": "https://github.com/mmicko/platform-lattice_ice40/releases/download/test/toolchain-iverilog-linux_x86_64-2019.10.1.tar.gz",
@@ -73,10 +63,6 @@
       "version": "~2019.10.1"
     },
     "toolchain-ice40": {
-      "type": "toolchain",
-      "version": "~2019.10.1"
-    },
-    "toolchain-ecp5": {
       "type": "toolchain",
       "version": "~2019.10.1"
     },
