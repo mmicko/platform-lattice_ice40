@@ -191,7 +191,7 @@ AlwaysBuild(target_upload)
 #
 iverilog = Builder(
     action='iverilog {0} -o $TARGET -D VCD_OUTPUT={1} {2} $SOURCES'.format(
-        IVER_PATH, TARGET_SIM, VLIB_FILES),
+        IVER_PATH, TARGET_SIM + '.vcd' if TARGET_SIM else '', VLIB_FILES),
     suffix='.out',
     src_suffix='.v')
 vcd = Builder(
