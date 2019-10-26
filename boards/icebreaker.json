@@ -1,26 +1,26 @@
 {
-    "build": {
-      "core": "icebreaker",
-      "cpu": "fpga",
-      "f_cpu": "12000000L",
-      "hwids": [
-        [
-          "0x0403",
-          "0x6010"
-        ]
-      ],
-      "mcu": "iCE40-UP5K-SG48",
-      "pack": "sg48",
-      "size": "5k",
-      "type": "up"
-    },
-    "frameworks": [],
-    "name": "iCEBreaker",
-    "upload": {
-      "maximum_ram_size": 32768,
-      "maximum_size": 32768
-    },
-    "url": "https://github.com/icebreaker-fpga/icebreaker",
-    "vendor": "1 Bit Squared"
-  }
+  "build": {
+    "core": "icebreaker",
+    "cpu": "fpga",
+    "f_cpu": "12000000L",
+    "hwids": [
+      [
+        "0x0403",
+        "0x6010"
+      ]
+    ],
+    "mcu": "iCE40-UP5K-SG48",
+    "pack": "sg48",
+    "size": "5k",
+    "type": "up"
+  },
+  "frameworks": [],
+  "name": "iCEBreaker",
+  "upload": {
+    "maximum_ram_size": 32768,
+    "maximum_size": 32768
+  },
+  "url": "https://github.com/icebreaker-fpga/icebreaker",
+  "vendor": "1 Bit Squared"
+}
   
