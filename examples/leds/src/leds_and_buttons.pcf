@@ -1,0 +1,11 @@
+# -- iCEBreaker
+
+set_io led[0] 27
+set_io led[1] 25
+set_io led[2] 21
+set_io led[3] 23
+set_io led[4] 26
+
+set_io btn[0] 20
+set_io btn[1] 19
+set_io btn[2] 18
