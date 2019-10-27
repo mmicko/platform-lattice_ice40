@@ -112,14 +112,18 @@ src_synth = [f for f in src_sim if f not in list_tb]
 
 # -- Get the PCF file
 src_dir = env.subst('$PROJECT_SRC_DIR')
-PCFs = join(src_dir, '*.pcf')
-PCF_list = env.Glob(PCFs)
-PCF = ''
 
-try:
-    PCF = PCF_list[0]
-except IndexError:
-    print('---> WARNING: no .pcf file found')
+if (env.subst("$BUILD_FLAGS")):
+    PCF = join(src_dir, env.subst("$BUILD_FLAGS"))
+else:
+    PCFs = join(src_dir, '*.pcf')
+    PCF_list = env.Glob(PCFs)
+    PCF = ''
+
+    try:
+        PCF = PCF_list[0]
+    except IndexError:
+        print('---> WARNING: no .pcf file found')
 
 #
 # Builder: Yosys (.v --> .json)
