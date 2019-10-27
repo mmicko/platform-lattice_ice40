@@ -124,7 +124,7 @@ except IndexError:
 #
 # Builder: Yosys (.v --> .json)
 #
-synth = Builder(
+builder_synth = Builder(
     action=env.VerboseAction(" ".join([
         "yosys",
         "-p", "\"synth_ice40 -json $TARGET\"",
@@ -137,7 +137,7 @@ synth = Builder(
 #
 # Builder: nextpnr-ice40 (.json --> .asc)
 #
-pnr = Builder(
+builder_pnr = Builder(
     action=env.VerboseAction(" ".join([
         "nextpnr-ice40",
         "--{0}{1}".format(board.get('build.type', 'hx'),board.get('build.size', '1k')),
@@ -152,15 +152,26 @@ pnr = Builder(
 
 # Builder: Icepack (.asc --> .bin)
 #
-bitstream = Builder(
+builder_bitstream = Builder(
     action=env.VerboseAction('icepack $SOURCE $TARGET', "Running icepack..."),
     suffix='.bin',
     src_suffix='.asc')
 
+
+env.Append(BUILDERS={
+    'Synth': builder_synth, 
+    'PnR': builder_pnr, 
+    'Bin': builder_bitstream
+})
+
+generate_json = env.Synth(TARGET, [src_synth])
+generate_asc = env.PnR(TARGET, [generate_json, PCF])
+generate_bin = env.Bin(TARGET, generate_asc)
+
 #
 # Builder: Icetime (.asc --> .rpt)
 #
-time_rpt = Builder(
+builder_time_rpt = Builder(
     action=env.VerboseAction(" ".join([
             "icetime",
             "-d", "{0}{1}".format(board.get('build.type', 'hx'),board.get('build.size', '1k')),
@@ -171,27 +182,12 @@ time_rpt = Builder(
     suffix='.rpt', # builder must have distinct suffix
     src_suffix='.asc')
 
-env.Append(BUILDERS={
-    'Synth': synth, 'PnR': pnr, 'Bin': bitstream, 'Time': time_rpt})
-
-generate_json = env.Synth(TARGET, [src_synth])
-generate_asc = env.PnR(TARGET, [generate_json, PCF])
-generate_bin = env.Bin(TARGET, generate_asc)
-
-#
-# Target: Time analysis (.rpt)
-#
-AlwaysBuild(env.Alias('time', env.Time(TARGET, generate_asc)))
-
-#
-# Target: Upload bitstream
-#
-AlwaysBuild(env.Alias('upload', generate_bin, '$UPLOADBINCMD'))
+env.Append(BUILDERS={'TimeReport': builder_time_rpt})
 
 #
 # Builders: Icarus Verilog
 #
-iverilog = Builder(
+builder_iverilog = Builder(
     action=env.VerboseAction(" ".join([
             "iverilog",
             IVER_PATH,
@@ -202,7 +198,7 @@ iverilog = Builder(
     suffix='.out',
     src_suffix='.v')
 
-verify = Builder(
+builder_verify = Builder(
     action=env.VerboseAction(" ".join([
             "iverilog",
             IVER_PATH,
@@ -211,34 +207,27 @@ verify = Builder(
     suffix='.verify', # builder must have distinct suffix
     src_suffix='.v')
 
-vcd = Builder(
+builder_vcd = Builder(
     action=env.VerboseAction(" ".join([
-            "vvp", VVP_PATH, "$SOURCE"
+            "vvp", 
+            VVP_PATH,
+            "$SOURCE"
         ]), "Running simulation..."),
     suffix='.vcd',
     src_suffix='.out')
 # NOTE: output file name is defined in the
 #       iverilog call using VCD_OUTPUT macro
 
-env.Append(BUILDERS={'IVerilog': iverilog, 'Verify': verify, 'VCD': vcd})
-
-#
-# Target: Verify verilog code
-#
-AlwaysBuild(env.Alias('verify', env.Verify(TARGET, src_synth)))
-
-#
-# Target: Simulate testbench
-#
-vcd_file = env.VCD(env.IVerilog(TARGET_SIM, src_sim))
-
-AlwaysBuild(env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
-    vcd_file[0], join(env['PROJECT_SRC_DIR'], SIMULNAME))))
+env.Append(BUILDERS={
+    'IVerilog': builder_iverilog, 
+    'Verify': builder_verify, 
+    'VCD': builder_vcd
+})
 
 #
 # Builders: Verilator
 #
-verilator = Builder(
+builder_verilator = Builder(
     action=env.VerboseAction(" ".join([
             "verilator",
             "--lint-only",
@@ -250,15 +239,29 @@ verilator = Builder(
     suffix='.lint', # builder must have distinct suffix
     src_suffix='.v')
 
-env.Append(BUILDERS={'Verilator': verilator})
+env.Append(BUILDERS={'Verilator': builder_verilator})
 
 #
-# Target: Lint
+# Targets
 #
+# Upload bitstream
+AlwaysBuild(env.Alias('upload', generate_bin, '$UPLOADBINCMD'))
+#
+# Time analysis (.rpt)
+AlwaysBuild(env.Alias('time', env.TimeReport(TARGET, generate_asc)))
+#
+# Verify verilog code
+AlwaysBuild(env.Alias('verify', env.Verify(TARGET, src_synth)))
+#
+# Simulate testbench
+vcd_file = env.VCD(env.IVerilog(TARGET_SIM, src_sim))
+
+AlwaysBuild(env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
+    vcd_file[0], join(env['PROJECT_SRC_DIR'], SIMULNAME))))
+#
+# Lint
 AlwaysBuild(env.Alias('lint', env.Verilator(TARGET, src_synth)))
-
 #
-# Setup default targets
-#
+# Default: Generate bitstream
 Default([generate_bin])
 
