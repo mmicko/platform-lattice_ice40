@@ -113,7 +113,7 @@ src_synth = [f for f in src_sim if f not in list_tb]
 # -- Get the PCF file
 src_dir = env.subst('$PROJECT_SRC_DIR')
 PCFs = join(src_dir, '*.pcf')
-PCF_list = Glob(PCFs)
+PCF_list = env.Glob(PCFs)
 PCF = ''
 
 try:
@@ -129,6 +129,7 @@ builder_synth = Builder(
         "yosys",
         "-p", "\"synth_ice40 -json $TARGET\"",
         "-q",
+        env.subst("$SRC_BUILD_FLAGS"),
         "$SOURCES"
         ]), "Running Yosys..."),
     suffix='.json',
