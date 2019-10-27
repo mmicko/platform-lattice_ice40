@@ -29,6 +29,8 @@ from SCons.Script import (COMMAND_LINE_TARGETS, AlwaysBuild, Builder, Default,
                           Glob)
 
 env = DefaultEnvironment()
+board = env.BoardConfig()
+
 pioPlatform = env.PioPlatform()
 
 env.Replace(
@@ -62,7 +64,7 @@ IVER_PATH = '' if isWindows else '-B "{0}"'.format(IVL_PATH)
 
 # -- Get a list of all the verilog files in the src folfer, in ASCII, with
 # -- the full path. All these files are used for the simulation
-v_nodes = Glob(join(env['PROJECTSRC_DIR'], '*.v'))
+v_nodes = Glob(join(env['PROJECT_SRC_DIR'], '*.v'))
 src_sim = [str(f) for f in v_nodes]
 
 # --- Get the Testbench file (there should be only 1)
@@ -108,7 +110,7 @@ if SIMULNAME:
 src_synth = [f for f in src_sim if f not in list_tb]
 
 # -- Get the PCF file
-src_dir = env.subst('$PROJECTSRC_DIR')
+src_dir = env.subst('$PROJECT_SRC_DIR')
 PCFs = join(src_dir, '*.pcf')
 PCF_list = Glob(PCFs)
 PCF = ''
@@ -122,28 +124,35 @@ except IndexError:
 # Builder: Yosys (.v --> .json)
 #
 synth = Builder(
-    action='yosys -p \"synth_ice40 -json $TARGET\" -q $SOURCES',
+    action=env.VerboseAction(" ".join([
+        "yosys",
+        "-p", "\"synth_ice40 -json $TARGET\"",
+        "-q",
+        "$SOURCES"
+        ]), "Running Yosys..."),
     suffix='.json',
     src_suffix='.v')
 
 #
-# Builder: Arachne-pnr (.json --> .asc)
+# Builder: nextpnr-ice40 (.json --> .asc)
 #
 pnr = Builder(
-    action='nextpnr-ice40 --{0}{1} --package {2} --json $SOURCE --pcf {3} --asc $TARGET --quiet'.format(
-        env.BoardConfig().get('build.type', 'hx'),
-        env.BoardConfig().get('build.size', '1k'),
-        env.BoardConfig().get('build.pack', 'tq144'),
-        PCF
-    ),
+    action=env.VerboseAction(" ".join([
+        "nextpnr-ice40",
+        "--{0}{1}".format(board.get('build.type', 'hx'),board.get('build.size', '1k')),
+        "--package", board.get('build.pack', 'tq144'),
+        "--json", "$SOURCE",
+        "--pcf {0}".format(PCF),
+        "--asc", "$TARGET",
+        "--quiet"
+        ]), "Running NextPnR..."),
     suffix='.asc',
     src_suffix='.json')
 
-#
 # Builder: Icepack (.asc --> .bin)
 #
 bitstream = Builder(
-    action='icepack $SOURCE $TARGET',
+    action=env.VerboseAction('icepack $SOURCE $TARGET', "Running icepack..."),
     suffix='.bin',
     src_suffix='.asc')
 
@@ -151,12 +160,14 @@ bitstream = Builder(
 # Builder: Icetime (.asc --> .rpt)
 #
 time_rpt = Builder(
-    action='icetime -d {0}{1} -P {2} -C "{3}" -mtr $TARGET $SOURCE'.format(
-        env.BoardConfig().get('build.type', 'hx'),
-        env.BoardConfig().get('build.size', '1k'),
-        env.BoardConfig().get('build.pack', 'tq144'),
-        CHIPDB_PATH
-    ),
+    action=env.VerboseAction(" ".join([
+            "icetime",
+            "-d", "{0}{1}".format(board.get('build.type', 'hx'),board.get('build.size', '1k')),
+            "-P", board.get('build.pack', 'tq144'),
+            "-C", CHIPDB_PATH,
+            "-mtr", "$TARGET",
+            "$SOURCE"        
+        ]), "Running icetime..."),
     suffix='.rpt',
     src_suffix='.asc')
 
@@ -185,13 +196,20 @@ AlwaysBuild(target_upload)
 # Builders: Icarus Verilog
 #
 iverilog = Builder(
-    action='iverilog {0} -o $TARGET -D VCD_OUTPUT={1} {2} $SOURCES'.format(
-        IVER_PATH, TARGET_SIM + '.vcd' if TARGET_SIM else '', VLIB_FILES),
+    action=env.VerboseAction(" ".join([
+            "iverilog",
+            IVER_PATH,
+            "-o", "$TARGET",
+            "-D VCD_OUTPUT={0}".format(TARGET_SIM + '.vcd' if TARGET_SIM else '', VLIB_FILES),
+            "$SOURCES"
+        ]), "Running iverilog..."),
     suffix='.out',
     src_suffix='.v')
+
 vcd = Builder(
-    action='vvp {0} $SOURCE'.format(
-        VVP_PATH),
+    action=env.VerboseAction(" ".join([
+            "vvp", VVP_PATH, "$SOURCE"
+        ]), "Running simulation..."),
     suffix='.vcd',
     src_suffix='.out')
 # NOTE: output file name is defined in the
@@ -214,17 +232,19 @@ sout = env.IVerilog(TARGET_SIM, src_sim)
 vcd_file = env.VCD(sout)
 
 target_sim = env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
-    vcd_file[0], join(env['PROJECTSRC_DIR'], SIMULNAME)))
+    vcd_file[0], join(env['PROJECT_SRC_DIR'], SIMULNAME)))
 AlwaysBuild(target_sim)
 
 # -- Verilator builder
 verilator = Builder(
-    action='verilator --lint-only -v {0}/ice40/cells_sim.v {1} {2} {3} {4} $SOURCES'.format(
-        YOSYS_PATH,
-        '-Wall',
-        '-Wno-style',
-        '',
-        ''),
+    action=env.VerboseAction(" ".join([
+            "verilator",
+            "--lint-only",
+            "-v", "{0}/ice40/cells_sim.v".format(YOSYS_PATH),
+            "-Wall",
+            "-Wno-style",
+            "$SOURCES"        
+        ]),  "Running Verilator..."),
     src_suffix='.v')
 
 env.Append(BUILDERS={'Verilator': verilator})
