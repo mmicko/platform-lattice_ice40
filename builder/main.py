@@ -122,6 +122,9 @@ else:
 
     try:
         PCF = PCF_list[0]
+        if (len(PCF_list) > 1):
+            print('---> ERROR: multiple .pcf file found, use build_flags to specify')
+            Exit(1)
     except IndexError:
         print('---> WARNING: no .pcf file found')
 
