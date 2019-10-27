@@ -38,6 +38,7 @@ env.Replace(
     UPLOADER='iceprog',
     UPLOADERFLAGS=[],
     UPLOADBINCMD='$UPLOADER $UPLOADERFLAGS $SOURCES')
+
 env.Append(SIMULNAME='simulation')
 
 # -- Target name for synthesis
@@ -234,7 +235,9 @@ vcd_file = env.VCD(env.IVerilog(TARGET_SIM, src_sim))
 AlwaysBuild(env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
     vcd_file[0], join(env['PROJECT_SRC_DIR'], SIMULNAME))))
 
-# -- Verilator builder
+#
+# Builders: Verilator
+#
 verilator = Builder(
     action=env.VerboseAction(" ".join([
             "verilator",
@@ -249,7 +252,9 @@ verilator = Builder(
 
 env.Append(BUILDERS={'Verilator': verilator})
 
-# --- Lint
+#
+# Target: Lint
+#
 AlwaysBuild(env.Alias('lint', env.Verilator(TARGET, src_synth)))
 
 #
