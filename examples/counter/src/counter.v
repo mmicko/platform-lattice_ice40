@@ -11,7 +11,7 @@ module counter #(parameter LOG2DELAY = 21)
 
     always @(posedge clk) begin
         counter <= counter + 1;
-        outcnt <= counter >> LOG2DELAY;
+        outcnt <= counter[BITS+LOG2DELAY-1:LOG2DELAY];
     end
 
     assign led = outcnt;
