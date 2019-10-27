@@ -118,7 +118,7 @@ if (env.subst("$BUILD_FLAGS")):
 else:
     PCFs = join(src_dir, '*.pcf')
     PCF_list = env.Glob(PCFs)
-    PCF = ''
+    PCF = None
 
     try:
         PCF = PCF_list[0]
@@ -148,7 +148,7 @@ builder_pnr = Builder(
         "--{0}{1}".format(board.get('build.type', 'hx'),board.get('build.size', '1k')),
         "--package", board.get('build.pack', 'tq144'),
         "--json", "$SOURCE",
-        "--pcf {0}".format(PCF),
+        "" if (PCF is None) else "--pcf {0}".format(PCF),
         "--asc", "$TARGET",
         "--quiet"
         ]), "Running NextPnR..."),
@@ -170,7 +170,10 @@ env.Append(BUILDERS={
 })
 
 generate_json = env.Synth(TARGET, [src_synth])
-generate_asc = env.PnR(TARGET, [generate_json, PCF])
+if PCF is None:
+    generate_asc = env.PnR(TARGET, [generate_json])
+else:    
+    generate_asc = env.PnR(TARGET, [generate_json, PCF])
 generate_bin = env.Bin(TARGET, generate_asc)
 
 #
