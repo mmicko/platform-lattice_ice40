@@ -165,32 +165,27 @@ time_rpt = Builder(
             "-d", "{0}{1}".format(board.get('build.type', 'hx'),board.get('build.size', '1k')),
             "-P", board.get('build.pack', 'tq144'),
             "-C", CHIPDB_PATH,
-            "-mtr", "$TARGET",
             "$SOURCE"        
         ]), "Running icetime..."),
-    suffix='.rpt',
+    suffix='.rpt', # builder must have distinct suffix
     src_suffix='.asc')
 
 env.Append(BUILDERS={
     'Synth': synth, 'PnR': pnr, 'Bin': bitstream, 'Time': time_rpt})
 
-blif = env.Synth(TARGET, [src_synth])
-asc = env.PnR(TARGET, [blif, PCF])
-binf = env.Bin(TARGET, asc)
+generate_json = env.Synth(TARGET, [src_synth])
+generate_asc = env.PnR(TARGET, [generate_json, PCF])
+generate_bin = env.Bin(TARGET, generate_asc)
 
 #
 # Target: Time analysis (.rpt)
 #
-rpt = env.Time(asc)
-
-target_time = env.Alias('time', rpt)
-AlwaysBuild(target_time)
+AlwaysBuild(env.Alias('time', env.Time(TARGET, generate_asc)))
 
 #
 # Target: Upload bitstream
 #
-target_upload = env.Alias('upload', binf, '$UPLOADBINCMD')
-AlwaysBuild(target_upload)
+AlwaysBuild(env.Alias('upload', generate_bin, '$UPLOADBINCMD'))
 
 #
 # Builders: Icarus Verilog
@@ -206,6 +201,15 @@ iverilog = Builder(
     suffix='.out',
     src_suffix='.v')
 
+verify = Builder(
+    action=env.VerboseAction(" ".join([
+            "iverilog",
+            IVER_PATH,
+            "$SOURCES"
+        ]), "Running iverilog (verify)..."),
+    suffix='.verify', # builder must have distinct suffix
+    src_suffix='.v')
+
 vcd = Builder(
     action=env.VerboseAction(" ".join([
             "vvp", VVP_PATH, "$SOURCE"
@@ -215,25 +219,20 @@ vcd = Builder(
 # NOTE: output file name is defined in the
 #       iverilog call using VCD_OUTPUT macro
 
-env.Append(BUILDERS={'IVerilog': iverilog, 'VCD': vcd})
+env.Append(BUILDERS={'IVerilog': iverilog, 'Verify': verify, 'VCD': vcd})
 
 #
 # Target: Verify verilog code
 #
-vout = env.IVerilog(TARGET, src_synth)
-
-target_verify = env.Alias('verify', vout)
-AlwaysBuild(target_verify)
+AlwaysBuild(env.Alias('verify', env.Verify(TARGET, src_synth)))
 
 #
 # Target: Simulate testbench
 #
-sout = env.IVerilog(TARGET_SIM, src_sim)
-vcd_file = env.VCD(sout)
+vcd_file = env.VCD(env.IVerilog(TARGET_SIM, src_sim))
 
-target_sim = env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
-    vcd_file[0], join(env['PROJECT_SRC_DIR'], SIMULNAME)))
-AlwaysBuild(target_sim)
+AlwaysBuild(env.Alias('sim', vcd_file, 'gtkwave {0} {1}.gtkw'.format(
+    vcd_file[0], join(env['PROJECT_SRC_DIR'], SIMULNAME))))
 
 # -- Verilator builder
 verilator = Builder(
@@ -245,23 +244,16 @@ verilator = Builder(
             "-Wno-style",
             "$SOURCES"        
         ]),  "Running Verilator..."),
+    suffix='.lint', # builder must have distinct suffix
     src_suffix='.v')
 
 env.Append(BUILDERS={'Verilator': verilator})
 
 # --- Lint
-lout = env.Verilator(TARGET, src_synth)
-
-lint = env.Alias('lint', lout)
-AlwaysBuild(lint)
+AlwaysBuild(env.Alias('lint', env.Verilator(TARGET, src_synth)))
 
 #
 # Setup default targets
 #
-Default([binf])
+Default([generate_bin])
 
-#
-# Target: Clean generated files
-#
-if GetOption('clean'):
-    env.Default([t, vout, sout, vcd_file])
