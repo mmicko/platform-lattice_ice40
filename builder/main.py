@@ -30,8 +30,8 @@ from SCons.Script import (COMMAND_LINE_TARGETS, AlwaysBuild, Builder, Default,
 
 env = DefaultEnvironment()
 board = env.BoardConfig()
-
 pioPlatform = env.PioPlatform()
+options = env.GetProjectOptions(as_dict=True)
 
 env.Replace(
     PROGNAME='hardware',
@@ -113,8 +113,8 @@ src_synth = [f for f in src_sim if f not in list_tb]
 # -- Get the PCF file
 src_dir = env.subst('$PROJECT_SRC_DIR')
 
-if (env.subst("$BUILD_FLAGS")):
-    PCF = join(src_dir, env.subst("$BUILD_FLAGS"))
+if (options.get("board_build.constraint")):
+    PCF = join(src_dir, options.get("board_build.constraint"))
 else:
     PCFs = join(src_dir, '*.pcf')
     PCF_list = env.Glob(PCFs)
@@ -123,7 +123,7 @@ else:
     try:
         PCF = PCF_list[0]
         if (len(PCF_list) > 1):
-            print('---> ERROR: multiple .pcf file found, use build_flags to specify')
+            print('---> ERROR: multiple .pcf file found, use board_build.constraint to specify')
             Exit(1)
     except IndexError:
         print('---> WARNING: no .pcf file found')
