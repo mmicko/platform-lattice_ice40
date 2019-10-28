@@ -113,8 +113,8 @@ src_synth = [f for f in src_sim if f not in list_tb]
 # -- Get the PCF file
 src_dir = env.subst('$PROJECT_SRC_DIR')
 
-if (options.get("board_build.constraint")):
-    PCF = join(src_dir, options.get("board_build.constraint"))
+if (options.get("board_build.constraints")):
+    PCF = join(src_dir, options.get("board_build.constraints"))
 else:
     PCFs = join(src_dir, '*.pcf')
     PCF_list = env.Glob(PCFs)
@@ -123,7 +123,7 @@ else:
     try:
         PCF = PCF_list[0]
         if (len(PCF_list) > 1):
-            print('---> ERROR: multiple .pcf file found, use board_build.constraint to specify')
+            print('---> ERROR: multiple .pcf file found, use board_build.constraints to specify')
             Exit(1)
     except IndexError:
         print('---> WARNING: no .pcf file found')
